@@ -7,21 +7,56 @@
 
 #include "sorting.h"
 
-/* 
-   bubble sort -- sequential, parallel -- 
+/*
+   bubble sort -- sequential, parallel --
 */
 
 void sequential_bubble_sort (uint64_t *T, const uint64_t size)
 {
-    /* TODO: sequential implementation of bubble sort */ 
-    
+      uint64_t tmp;
+      int sorted;
+      do {
+        sorted = 1;
+        for(int i=0; i<size-1; ++i){
+          if(T[i] > T[i+1]){
+            tmp = T[i];
+            T[i] = T[i+1];
+            T[i+1] = tmp;
+            sorted = 0;
+          }
+        }
+      } while(sorted == 0);
     return ;
 }
 
 void parallel_bubble_sort (uint64_t *T, const uint64_t size)
 {
-    /* TODO: parallel implementation of bubble sort */
+  int nbChuncks=16;
+	int chunckSize=size/nbChuncks;
+	int sorted=0;
+  int tmp;
 
+    while (sorted==0){
+  		sorted=1;
+  		#pragma omp parallel default(none) shared(T,nbChuncks,chunckSize) reduction(|:sorted)
+      {
+        #pragma omp for
+    		for (int i=0;i<nbChuncks;++i){
+          sequential_bubble_sort(T+i*chunckSize, chunckSize);
+    		}
+      }
+      //printf("res: %d\n", is_sorted(T, chunckSize));
+      //printf("res: %d\n", is_sorted(T+chunckSize, chunckSize));
+      for (int i=1;i<nbChuncks;++i){
+  			if(T[i*chunckSize-1]>T[i*chunckSize]){
+          tmp = T[i*chunckSize-1];
+          T[i*chunckSize-1] = T[i*chunckSize];
+          T[i*chunckSize] = tmp;
+          sorted=0;
+  			}
+  	  }
+
+    }
     return;
 }
 
@@ -48,7 +83,7 @@ int main (int argc, char **argv)
 #ifdef RINIT
     printf("--> The array is initialized randomly\n");
 #endif
-    
+
 
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++){
 #ifdef RINIT
@@ -56,12 +91,12 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
-      
+
+
         start = _rdtsc () ;
-        
+
         sequential_bubble_sort (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -83,11 +118,11 @@ int main (int argc, char **argv)
 #endif
     }
 
-    av = average_time() ;  
+    av = average_time() ;
 
     printf ("\n bubble serial \t\t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
 
-  
+
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++)
     {
 #ifdef RINIT
@@ -95,11 +130,11 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
+
         start = _rdtsc () ;
 
         parallel_bubble_sort (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -117,13 +152,13 @@ int main (int argc, char **argv)
             exit (-1) ;
 	}
 #endif
-                
-        
+
+
     }
-    
-    av = average_time() ;  
+
+    av = average_time() ;
     printf ("\n bubble parallel \t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
-  
+
     /* print_array (X, N) ; */
 
     /* before terminating, we run one extra test of the algorithm */
@@ -150,5 +185,5 @@ int main (int argc, char **argv)
     free(X);
     free(Y);
     free(Z);
-    
+
 }

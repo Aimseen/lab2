@@ -4,7 +4,7 @@
 
 #include <x86intrin.h>
 
-#define NBEXPERIMENTS    7
+#define NBEXPERIMENTS    20
 
 static long long unsigned int experiments [NBEXPERIMENTS] ;
 
@@ -185,19 +185,7 @@ void mult_mat_vector_tri_inf3 (matrix M, vector b, vector c)
 
 void mult_mat_vector_tri_inf4 (matrix M, vector b, vector c)
 {
-  register unsigned int i ;
-  register unsigned int j ;
-  register double r ;
 
-  #pragma omp parallel
-  #pragma omp for
-  for ( i = 0 ; i < N ; i = i + 1){
-      r = 0.0 ;
-      for (j = 0 ; j <= i ; j = j + 1){
-	       r += M [i][j] * b [j] ;
-	    }
-      c [i] = r ;
-  }
   return ;
 }
 
