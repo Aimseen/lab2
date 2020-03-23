@@ -13,14 +13,21 @@ static int compare (const void *x, const void *y)
     /* TODO: comparison function to be used by qsort()*/
 
     /* cast x and y to uint64_t* before comparing */
+    uint64_t x1 = * (uint64_t *) x;
+    uint64_t y1 = * (uint64_t *) y;
+
+    return x1 < y1;
     
 }
 
 void sequential_qsort_sort (uint64_t *T, const int size)
 {
 
-    /* TODO: sequential sorting based on libc qsort() function */
-  
+    if (T[0] < T[size-1]) {
+      uint64_t pivot = T[0];
+      sequential_qsort_sort(T, pivot);
+      sequential_qsort_sort(T+(pivot+1), size);
+    }
     return ;
 }
 

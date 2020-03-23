@@ -4,12 +4,13 @@
 
 #include <x86intrin.h>
 
-#define NBEXPERIMENTS    7
+#define NBEXPERIMENTS    300
 
 static long long unsigned int experiments [NBEXPERIMENTS] ;
 
-#define N              1024
+#define N              8192
 
+#define CHUNK_SIZE	256
 typedef double vector [N] ;
 
 typedef double matrix [N][N] ;
@@ -131,7 +132,7 @@ void mult_mat_vector_tri_inf1 (matrix M, vector b, vector c)
 
   #pragma omp parallel default(none) shared(M,b,c) private(r,i,j)
   {
-    #pragma omp for schedule(static, 128)
+    #pragma omp for schedule(static, CHUNK_SIZE)
     for ( i = 0 ; i < N ; i = i + 1){
         r = 0.0 ;
         for (j = 0 ; j <= i ; j = j + 1){
@@ -151,7 +152,7 @@ void mult_mat_vector_tri_inf2 (matrix M, vector b, vector c)
 
   #pragma omp parallel default(none) shared(M,b,c) private(r,i,j)
   {
-    #pragma omp for schedule(dynamic, 128)
+    #pragma omp for schedule(dynamic, CHUNK_SIZE)
     for ( i = 0 ; i < N ; i = i + 1){
         r = 0.0 ;
         for (j = 0 ; j <= i ; j = j + 1){
@@ -171,7 +172,7 @@ void mult_mat_vector_tri_inf3 (matrix M, vector b, vector c)
 
   #pragma omp parallel default(none) shared(M,b,c) private(r,i,j)
   {
-    #pragma omp for schedule(guided, 128)
+    #pragma omp for schedule(guided, CHUNK_SIZE)
     for ( i = 0 ; i < N ; i = i + 1){
         r = 0.0 ;
         for (j = 0 ; j <= i ; j = j + 1){
