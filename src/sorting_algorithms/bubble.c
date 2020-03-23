@@ -31,23 +31,23 @@ void sequential_bubble_sort (uint64_t *T, const uint64_t size)
 
 void parallel_bubble_sort (uint64_t *T, const uint64_t size)
 {
-  int nbChuncks=16;
-	int chunckSize=size/nbChuncks;
+  int nbChunks=16;
+	int chunckSize=size/nbChunks;
 	int sorted=0;
   int tmp;
 
     while (sorted==0){
   		sorted=1;
-  		#pragma omp parallel default(none) shared(T,nbChuncks,chunckSize) reduction(|:sorted)
+  		#pragma omp parallel default(none) shared(T,nbChunks,chunckSize) reduction(|:sorted)
       {
         #pragma omp for
-    		for (int i=0;i<nbChuncks;++i){
+    		for (int i=0;i<nbChunks;++i){
           sequential_bubble_sort(T+i*chunckSize, chunckSize);
     		}
       }
       //printf("res: %d\n", is_sorted(T, chunckSize));
       //printf("res: %d\n", is_sorted(T+chunckSize, chunckSize));
-      for (int i=1;i<nbChuncks;++i){
+      for (int i=1;i<nbChunks;++i){
   			if(T[i*chunckSize-1]>T[i*chunckSize]){
           tmp = T[i*chunckSize-1];
           T[i*chunckSize-1] = T[i*chunckSize];

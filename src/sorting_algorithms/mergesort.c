@@ -7,21 +7,86 @@
 
 #include "sorting.h"
 
-/* 
-   merge sort -- sequential, parallel -- 
+/*
+   merge sort -- sequential, parallel --
 */
+
+/*
+   Merge two sorted chunks of array T!
+   The two chunks are of size size
+   First chunck starts at T[0], second chunck starts at T[size]
+*/
+void merge (uint64_t *T, const uint64_t size)
+{
+  uint64_t *X = (uint64_t *) malloc (2 * size * sizeof(uint64_t)) ;
+
+  uint64_t i = 0 ;
+  uint64_t j = size ;
+  uint64_t k = 0 ;
+
+  while ((i < size) && (j < 2*size))
+    {
+      if (T[i] < T [j])
+	{
+	  X [k] = T [i] ;
+	  i = i + 1 ;
+	}
+      else
+	{
+	  X [k] = T [j] ;
+	  j = j + 1 ;
+	}
+      k = k + 1 ;
+    }
+
+  if (i < size)
+    {
+      for (; i < size; i++, k++)
+	{
+	  X [k] = T [i] ;
+	}
+    }
+  else
+    {
+      for (; j < 2*size; j++, k++)
+	{
+	  X [k] = T [j] ;
+	}
+    }
+
+  memcpy (T, X, 2*size*sizeof(uint64_t)) ;
+  free (X) ;
+
+  return ;
+}
+
 
 void sequential_merge_sort (uint64_t *T, const uint64_t size)
 {
-    /* TODO: sequential implementation of merge sort */ 
-    
+      if (size>1){
+        sequential_merge_sort(T, size/2);
+        sequential_merge_sort(T + size/2, size-size/2);
+        merge(T, size/2);
+      }
     return ;
 }
 
 void parallel_merge_sort (uint64_t *T, const uint64_t size)
 {
-    /* TODO: parallel implementation of merge sort */
-
+  #pragma omp parallel
+  {
+  #pragma omp single
+  {
+  if (size>1){
+    #pragma omp task
+    sequential_merge_sort(T, size/2);
+    #pragma omp task
+    sequential_merge_sort(T + size/2, size-size/2);
+    #pragma omp taskwait
+    merge(T, size/2);
+  }
+  }
+  }
     return;
 }
 
@@ -48,7 +113,7 @@ int main (int argc, char **argv)
 #ifdef RINIT
     printf("--> The array is initialized randomly\n");
 #endif
-    
+
 
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++){
 #ifdef RINIT
@@ -56,12 +121,12 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
-      
+
+
         start = _rdtsc () ;
-        
+
         sequential_merge_sort (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -83,11 +148,11 @@ int main (int argc, char **argv)
 #endif
     }
 
-    av = average_time() ;  
+    av = average_time() ;
 
     printf ("\n mergesort serial \t\t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
 
-  
+
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++)
     {
 #ifdef RINIT
@@ -95,11 +160,11 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
+
         start = _rdtsc () ;
 
         parallel_merge_sort (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -117,13 +182,13 @@ int main (int argc, char **argv)
             exit (-1) ;
 	}
 #endif
-                
-        
+
+
     }
-    
-    av = average_time() ;  
+
+    av = average_time() ;
     printf ("\n mergesort parallel \t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
-  
+
     /* print_array (X, N) ; */
 
     /* before terminating, we run one extra test of the algorithm */
@@ -150,5 +215,5 @@ int main (int argc, char **argv)
     free(X);
     free(Y);
     free(Z);
-    
+
 }

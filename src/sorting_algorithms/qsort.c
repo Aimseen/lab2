@@ -2,6 +2,7 @@
 #include <omp.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <x86intrin.h>
 
@@ -13,25 +14,17 @@ static int compare (const void *x, const void *y)
     /* TODO: comparison function to be used by qsort()*/
 
     /* cast x and y to uint64_t* before comparing */
-    uint64_t x1 = * (uint64_t *) x;
-    uint64_t y1 = * (uint64_t *) y;
+    return ( *(uint64_t*)x - *(uint64_t*)y );;
 
-    return x1 < y1;
-    
 }
 
 void sequential_qsort_sort (uint64_t *T, const int size)
 {
-
-    if (T[0] < T[size-1]) {
-      uint64_t pivot = T[0];
-      sequential_qsort_sort(T, pivot);
-      sequential_qsort_sort(T+(pivot+1), size);
-    }
+    qsort(T, (size_t) size, sizeof(uint64_t), compare);
     return ;
 }
 
-/* 
+/*
    Merge two sorted chunks of array T!
    The two chunks are of size size
    First chunck starts at T[0], second chunck starts at T[size]
@@ -39,11 +32,11 @@ void sequential_qsort_sort (uint64_t *T, const int size)
 void merge (uint64_t *T, const uint64_t size)
 {
   uint64_t *X = (uint64_t *) malloc (2 * size * sizeof(uint64_t)) ;
-  
+
   uint64_t i = 0 ;
   uint64_t j = size ;
   uint64_t k = 0 ;
-  
+
   while ((i < size) && (j < 2*size))
     {
       if (T[i] < T [j])
@@ -73,10 +66,10 @@ void merge (uint64_t *T, const uint64_t size)
 	  X [k] = T [j] ;
 	}
     }
-  
+
   memcpy (T, X, 2*size*sizeof(uint64_t)) ;
   free (X) ;
-  
+
   return ;
 }
 
@@ -84,9 +77,21 @@ void merge (uint64_t *T, const uint64_t size)
 
 void parallel_qsort_sort (uint64_t *T, const uint64_t size)
 {
+    size_t nbChunks=8;
+    #pragma omp parralel
+    {
+      #pragma omp for
+      for(size_t i=0; i<nbChunks; ++i){
+        sequential_qsort_sort(T+i*size/nbChunks, size/nbChunks);
+      }
+    }
+    while(nbChunks>1){
+      for(size_t i=0; i<nbChunks/2; ++i){
+        merge(T+i*2*(size/nbChunks),size/nbChunks);
+      }
+      nbChunks = nbChunks >> 1;
+    }
 
-    /* TODO: parallel sorting based on libc qsort() function +
-     * sequential merging */
 
 }
 
@@ -94,9 +99,22 @@ void parallel_qsort_sort (uint64_t *T, const uint64_t size)
 void parallel_qsort_sort1 (uint64_t *T, const uint64_t size)
 {
 
-    /* TODO: parallel sorting based on libc qsort() function +
-     * PARALLEL merging */
-
+  size_t nbChunks=8;
+  size_t i;
+  #pragma omp parralel default(none) shared(T,nbChunks,size) private(i)
+  {
+    #pragma omp for
+    for(i=0; i<nbChunks; ++i){
+      sequential_qsort_sort(T+i*size/nbChunks, size/nbChunks);
+    }
+  while(nbChunks>1){
+    #pragma omp for
+    for(i=0; i<nbChunks/2; ++i){
+      merge(T+i*2*(size/nbChunks),size/nbChunks);
+    }
+    nbChunks = nbChunks >> 1;
+    }
+  }
 }
 
 
@@ -122,7 +140,7 @@ int main (int argc, char **argv)
 #ifdef RINIT
     printf("--> The array is initialized randomly\n");
 #endif
-    
+
 
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++){
 #ifdef RINIT
@@ -130,12 +148,12 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
-      
+
+
         start = _rdtsc () ;
-        
+
         sequential_qsort_sort (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -157,11 +175,11 @@ int main (int argc, char **argv)
 #endif
     }
 
-    av = average_time() ;  
+    av = average_time() ;
 
     printf ("\n qsort serial \t\t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
 
-  
+
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++)
     {
 #ifdef RINIT
@@ -169,12 +187,12 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
+
         start = _rdtsc () ;
-        
+
         parallel_qsort_sort (X, N) ;
 
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -192,11 +210,11 @@ int main (int argc, char **argv)
             exit (-1) ;
 	}
 #endif
-                
-        
+
+
     }
-    
-    av = average_time() ;  
+
+    av = average_time() ;
     printf ("\n qsort parallel (merge seq) \t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
 
     for (exp = 0 ; exp < NBEXPERIMENTS; exp++)
@@ -206,11 +224,11 @@ int main (int argc, char **argv)
 #else
         init_array_sequence (X, N);
 #endif
-        
+
         start = _rdtsc () ;
 
         parallel_qsort_sort1 (X, N) ;
-     
+
         end = _rdtsc () ;
         experiments [exp] = end - start ;
 
@@ -228,11 +246,11 @@ int main (int argc, char **argv)
             exit (-1) ;
 	}
 #endif
-                
-        
+
+
     }
-    
-    av = average_time() ;  
+
+    av = average_time() ;
     printf ("\n qsort parallel \t\t %.2lf Mcycles\n\n", (double)av/1000000) ;
 
     /* before terminating, we run one extra test of the algorithm */
@@ -259,5 +277,5 @@ int main (int argc, char **argv)
     free(X);
     free(Y);
     free(Z);
-    
+
 }
